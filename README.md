@@ -1,36 +1,78 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Portfolio CMS
 
-## Getting Started
+Next.js portfolio with protected admin, Prisma/Supabase data, dynamic resume, analytics, PWA support, and validated media uploads.
 
-First, run the development server:
+## Local development
+
+Copy `.env.example` to `.env.local`, fill in real values, and never commit `.env.local`.
 
 ```bash
+npm install
+dotenv -e .env.local -- npx prisma@5.22.0 generate
+npm run db:migrate-admin
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Routes:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- `/` public portfolio
+- `/resume` public resume
+- `/admin` or `/admin/login` admin login
+- `/api/health` database health check
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Production deployment
 
-## Learn More
+1. Push the repository to a private Git provider.
+2. Import it into a Next.js host such as Vercel.
+3. Set the build command to `npm run build` and install command to `npm ci`.
+4. Configure `NEXT_PUBLIC_API_URL`, `JWT_SECRET_KEY`, `DATABASE_URL`, and `DIRECT_URL` in the host. Use a new random JWT secret of at least 32 characters.
+5. Apply committed migrations from a controlled release step:
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm run db:deploy
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Use the Supabase pooler URL for `DATABASE_URL` and direct session URL for `DIRECT_URL`. Do not run `migrate dev` against production.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+After deploy, verify:
 
-## Deploy on Vercel
+```text
+https://hephzibahjones.online/
+https://hephzibahjones.online/admin
+https://hephzibahjones.online/api/health
+https://hephzibahjones.online/manifest.webmanifest
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+The health endpoint should return HTTP 200 with `status: ok` and `database: connected`.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## File storage warning
+
+The current development upload route writes to `public/uploads`. Serverless filesystems are ephemeral, so production uploads must be moved to Supabase Storage, Vercel Blob, or S3 before relying on uploads in production. Preserve the existing authentication, MIME allowlist, 10 MB limit, generated names, and private-by-default behavior when replacing the storage adapter.
+
+## Domain and HTTPS
+
+Add `hephzibahjones.online` in the hosting provider, update DNS at the registrar, wait for TLS, and set `NEXT_PUBLIC_API_URL` to `https://hephzibahjones.online`. Then verify the public site, `/admin`, health endpoint, and PWA manifest.
+
+## Verification
+
+```bash
+npm run lint
+npx tsc --noEmit
+npm run test:security
+npm run build
+```
+
+## Release checklist
+
+- [ ] Production secrets are configured in the host, not Git
+- [ ] Supabase is running and migrations are applied
+- [ ] Admin account exists and login works
+- [ ] `/api/health` returns 200
+- [ ] Published content is intentional
+- [ ] Object storage replaces local uploads
+- [ ] Backup endpoint is authenticated and tested
+- [ ] Desktop and mobile smoke checks pass
+- [ ] Custom domain and HTTPS are verified
+- [ ] Database backup and rollback plan are ready
+
+Multi-language content, complete CRUD forms for every model, and Playwright/Cypress browser automation remain follow-up work.
